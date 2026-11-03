@@ -197,24 +197,36 @@ Em nove das doze instâncias, a média do SA supera o BKV, e a vantagem cresce
 com o tamanho da instância dentro de cada família, chegando a 12{,}7\% em
 jifc04. Nas três instâncias restantes (jifc01, jifc09 e jifc10), a melhor
 replicação fica entre 0{,}06\% e 0{,}32\% abaixo do BKV, e a média, entre
-0{,}24\% e 0{,}65\%. Como os BKV das instâncias maiores foram superados por
-margem grande, os limites superiores do solver são uma referência mais
-informativa: nenhuma solução do SA os ultrapassa, e a melhor solução de cada
-instância está entre 1{,}6\% e 4{,}7\% abaixo do limite. Esse intervalo é
-um limitante para a distância ao ótimo, que inclui também a folga do
-limite.
+0{,}24\% e 0{,}65\%. Em jifc01, o solver provou que o BKV é ótimo, e a melhor
+solução do SA está a 0{,}06\% dele. Como os BKV das instâncias maiores foram
+superados por margem grande, os limites superiores do solver são uma
+referência mais informativa: nenhuma solução do SA os ultrapassa, e a melhor
+solução de cada instância está entre 0{,}06\% e 4{,}7\% abaixo do limite.
+Esse valor limita a distância ao ótimo por cima, pois inclui também a folga
+do próprio limite.
 
-O solver, por outro lado, não encontrou soluções úteis em 1800\,s: as
-soluções inteiras obtidas contêm apenas o Palácio e poucos vizinhos, com
-esplendor entre 106 e 868, e o gap informado fica acima de 99\%, calculado
-como $100(\text{limite}-\text{valor})/\text{limite}$. Em jifc04, jifc07,
-jifc08, jifc11 e jifc12, a árvore de busca não passou de dois nós. A causa é a relaxação linear fraca do modelo de fluxo: com
+O desempenho do solver, com gap calculado como
+$100(\text{limite}-\text{valor})/\text{limite}$, depende fortemente do
+tamanho da instância. Com $n=500$, ele resolveu jifc01 até a otimalidade em
+1777\,s e terminou jifc05 e jifc09 com gaps de 5{,}4\% e 1{,}0\%. Em jifc05,
+sua solução supera o BKV, mas fica 1{,}7\% abaixo da melhor do SA; em jifc09,
+é a única instância em que o solver encontrou solução melhor que todas as
+replicações do SA (45\,256 contra 45\,202), ainda abaixo do BKV. Com
+$n\ge1000$, as soluções inteiras obtidas em 1800\,s contêm apenas o Palácio e
+poucos vizinhos, com esplendor entre 106 e 868, e o gap fica acima de 99\%;
+em jifc04, jifc07, jifc08, jifc11 e jifc12, a árvore de busca não passou de
+dois nós. A causa é a relaxação linear fraca do modelo de fluxo: com
 $M=n-1$ em (PLI-6)--(PLI-7), um setor com $x_i$ próximo de zero pode
 receber e repassar fluxo, de modo que a relaxação quase ignora a
 conectividade e o limite se aproxima do de uma mochila fracionária. Um modelo
 mais forte exigiria, por exemplo, restrições de corte de conectividade
 geradas sob demanda \citep{MagnantiWolsey1995}, o que está fora do escopo
 deste trabalho.
+
+Esse comportamento do solver é coerente com o padrão dos BKV: ótimo ou
+próximo do ótimo nas instâncias menores e cada vez mais distante dele nas
+maiores, o que sugere que os BKV destas últimas foram obtidos com esforço
+limitado.
 
 O tempo do SA cresce com $n$ e com $|C|$, de 10\,s nas instâncias com
 $n=500$ a 177\,s nas com $n=2000$, e é sempre muito menor que o tempo dado ao
@@ -247,8 +259,9 @@ fronteira.
   \centering
   \begin{tikzpicture}
     \begin{axis}[width=0.85\textwidth, height=6cm, xlabel={nível de temperatura $k$},
-                 ylabel={esplendor}, legend pos=south east,
-                 y tick label style={/pgf/number format/1000 sep={.}}]
+                 ylabel={esplendor}, legend pos=south east, xmin=0, xmax=81,
+                 scaled y ticks=false,
+                 y tick label style={/pgf/number format/.cd, fixed, 1000 sep={\,}}]
       \addplot[thin, gray] table[x=level, y=current, col sep=comma]
         {../../results/sa_calibrada/trace/jifc06_calibrada_s1.csv};
       \addplot[thick, black] table[x=level, y=best, col sep=comma]
@@ -266,10 +279,12 @@ O Simulated Annealing proposto, com amostragem uniforme dos movimentos
 viáveis por rejeição e testes de conectividade baseados em pontos de
 articulação, produziu soluções viáveis de alta qualidade para todas as
 instâncias, superando o BKV em nove das doze e ficando a menos de 0{,}7\% dele
-nas demais, em no máximo três minutos por execução. O modelo PLIM, mesmo com a
-linearização compacta da restrição hídrica, não produziu soluções úteis em
-30 minutos, mas forneceu limites superiores que situam as soluções do SA a no
-máximo 4{,}7\% do ótimo.
+nas demais, em no máximo três minutos por execução. O modelo PLIM, com a
+linearização compacta da restrição hídrica, é competitivo nas instâncias com
+500 setores, em que provou a otimalidade de jifc01 e superou o SA em jifc09,
+mas não produziu soluções úteis em 30 minutos a partir de 1000 setores. Ainda
+assim, seus limites superiores situam as soluções do SA a no máximo 4{,}7\%
+do ótimo.
 
 A calibração mostrou que a escolha da temperatura final é decisiva neste
 problema: a configuração da proposta encerrava a busca antes que a solução

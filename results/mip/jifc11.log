@@ -1,0 +1,122 @@
+Running HiGHS 1.15.1 (git hash: 04024d7): Copyright (c) 2026 under MIT licence terms
+Includes third-party software components, see THIRD_PARTY_NOTICES.md for full details
+MIP has 44393 rows; 23697 cols; 134675 nonzeros; 1500 integer variables (1499 binary)
+Coefficient ranges:
+  Matrix  [1e+00, 2e+03]
+  Cost    [6e+00, 1e+03]
+  Bound   [1e+00, 1e+00]
+  RHS     [7e+04, 7e+04]
+Presolving model
+44376 rows, 23696 cols, 134622 nonzeros 0s
+44359 rows, 23696 cols, 134605 nonzeros 2s
+Presolve reductions: rows 44359(-34); columns 23696(-1); nonzeros 134605(-70) 
+Objective function is integral with scale 1
+
+Solving MIP model with:
+   44359 rows
+   23696 cols (1499 binary, 0 integer, 0 implied int., 22197 continuous, 0 domain fixed)
+   134605 nonzeros
+   Thread count 1 (of 8 threads). Using 1 max workers. Parallel search off
+
+Src: B => Branching; C => Central rounding; F => Feasibility pump; H => Heuristic;
+     I => Shifting; J => Feasibility jump; L => Sub-MIP; P => Empty MIP; R => Randomized rounding;
+     S => Solve LP; T => Evaluate node; U => Unbounded; X => User solution; Y => HiGHS solution;
+     Z => ZI Round; l => Trivial lower; p => Trivial point; u => Trivial upper; z => Trivial zero
+
+        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      
+Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time
+
+ J       0       0         0   0.00%   inf             364                Large        0      0      0         0     3.4s
+         0       0         0   0.00%   82416.611371    364                Large        0      0      5     19777    48.0s
+         0       0         0   0.00%   82050.058478    364                Large      597     81      5     25402    68.9s
+         0       0         0   0.00%   81847.556554    364                Large     1271    153      5     29912    93.7s
+         0       0         0   0.00%   81650.907325    364                Large     1977    218      5     36592   126.7s
+         0       0         0   0.00%   81534.211861    364                Large     2747    279      5     41428   142.8s
+         0       0         0   0.00%   81439.720831    364                Large     3452    345    199     45453   168.6s
+         0       0         0   0.00%   81393.273815    364                Large     4097    401    199     48606   184.4s
+         0       0         0   0.00%   81352.216702    364                Large     4795    458    199     50055   194.0s
+         0       0         0   0.00%   81306.7571      364                Large     5482    522    199     52556   210.1s
+         0       0         0   0.00%   81255.733454    364                Large     6189    578    199     56721   237.8s
+         0       0         0   0.00%   81222.014766    364                Large     6923    634    199     58431   253.9s
+         0       0         0   0.00%   81208.022007    364                Large     7578    691    199     60200   270.9s
+         0       0         0   0.00%   81171.263049    364                Large     8174    740    199     61530   285.6s
+         0       0         0   0.00%   81150.270401    364                Large     8755    789    199     63104   301.8s
+         0       0         0   0.00%   81120.38912     364                Large     9379    841    199     69383   330.4s
+         0       0         0   0.00%   81102.637805    364                Large     9896    804    199     71449   347.4s
+         0       0         0   0.00%   81084.68895     364                Large    10391    853    199     73700   368.8s
+         0       0         0   0.00%   81079.287058    364                Large    10919    902    199     75666   412.7s
+         0       0         0   0.00%   81056.727335    364                Large    10633    946    199     78083   431.1s
+
+        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      
+Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time
+
+         0       0         0   0.00%   81037.560249    364                Large    11180    985    199     81529   458.4s
+         0       0         0   0.00%   81020.288491    364                Large    10476    865    199     84329   481.3s
+         0       0         0   0.00%   81010.918777    364                Large    10906    906    199     90030   516.7s
+         0       0         0   0.00%   81007.140994    364                Large    11257    946    199     92675   541.2s
+         0       0         0   0.00%   80998.7663      364                Large    10274    986    199     95553   564.4s
+         0       0         0   0.00%   80991.222214    364                Large    10636   1029    199     98087   581.3s
+         0       0         0   0.00%   80989.360462    364                Large    10955    866    199    100732   604.0s
+         0       0         0   0.00%   80984.975326    364                Large     9777    899    199    102968   622.6s
+         0       0         0   0.00%   80980.197571    364                Large    10020    934    199    104650   638.4s
+         0       0         0   0.00%   80978.044934    364                Large    10269    963    199    106088   652.8s
+         0       0         0   0.00%   80966.182522    364                Large    10552    996    199    109999   676.5s
+         0       0         0   0.00%   80961.148189    364                Large    10905    831    199    111207   690.4s
+         0       0         0   0.00%   80950.145108    364                Large     9490    861    199    113397   707.3s
+         0       0         0   0.00%   80949.712445    364                Large     9796    893    199    114230   720.0s
+         0       0         0   0.00%   80949.203768    364                Large    10035    925    199    115760   734.6s
+         0       0         0   0.00%   80947.934843    364                Large    10201    953    199    117035   748.1s
+         0       0         0   0.00%   80945.162425    364                Large    10397    809    199    120052   766.1s
+         0       0         0   0.00%   80940.2275      364                Large    10593    837    199    121151   778.8s
+         0       0         0   0.00%   80935.770209    364                Large    10753    862    199    124242   797.4s
+         0       0         0   0.00%   80935.02305     364                Large    10918    889    199    125218   809.3s
+
+        Nodes      |    B&B Tree     |            Objective Bounds              |  Dynamic Constraints |       Work      
+Src  Proc. InQueue |  Leaves   Expl. | BestBound       BestSol              Gap |   Cuts   InLp Confl. | LpIters     Time
+
+         0       0         0   0.00%   80930.041774    364                Large     9590    912    199    128303   827.5s
+         0       0         0   0.00%   80925.327513    364                Large     9793    779    199    131765   847.6s
+         0       0         0   0.00%   80923.046396    364                Large    10007    805    199    133361   862.3s
+         0       0         0   0.00%   80914.307543    364                Large    10150    829    199    135753   880.3s
+         0       0         0   0.00%   80909.728554    364                Large    10281    853    199    139950   902.1s
+         0       0         0   0.00%   80908.2024      364                Large    10489    876    199    141524   920.7s
+         0       0         0   0.00%   80905.730909    364                Large    10676    771    199    149593   954.3s
+         0       0         0   0.00%   80904.319689    364                Large     9392    795    199    152147   970.8s
+         0       0         0   0.00%   80903.376688    364                Large     9607    820    199    153724   983.9s
+         0       0         0   0.00%   80902.898348    364                Large     9747    845    199    154600   995.2s
+         0       0         0   0.00%   80901.976578    364                Large     9908    868    199    156285  1011.7s
+         0       0         0   0.00%   80901.106109    364                Large    10053    758    199    157265  1025.2s
+         0       0         0   0.00%   80900.580815    364                Large    10143    774    199    158467  1036.3s
+         0       0         0   0.00%   80900.316234    364                Large     9916    794    199    160323  1049.8s
+         0       0         0   0.00%   80900.316234    364                Large     9916    475    199    237040  1120.9s
+         2       2         1   0.00%   80900.316234    364                Large     8754    475    199    402810  1800.1s
+         2       2         1   0.00%   80900.316234    364                Large     8754    475    199    402810  1800.1s
+
+Solving report
+  Status            Time limit reached
+  Primal bound      364
+  Dual bound        80900
+  Gap               22125.27%
+  P-D integral      489718.614814
+  Solution status   feasible
+                    364 (objective)
+                    0 (bound viol.)
+                    0 (int. viol.)
+                    0 (row viol.)
+  Timing            1800.10
+                    11.28 (Presolve)
+                        MIP    time [calls] = 3.05 [1]
+                        subMIP time [calls] = 8.23 [29]
+                    1788.80 (Solve)
+                        MIP    time [calls] = 1726.05 [1]
+                        subMIP time [calls] = 62.75 [29]
+                    0.00 (Postsolve)
+                        MIP    time [calls] = 0.00 [1]
+                        subMIP time [calls] = 0.00 [29]
+  Max sub-MIP depth 10
+  Nodes             2
+  Repair LPs        0
+  LP iterations     402810
+                    165770 (strong br.)
+                    140546 (separation)
+                    76717 (heuristics)
