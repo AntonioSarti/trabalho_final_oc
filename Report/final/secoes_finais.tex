@@ -1,0 +1,311 @@
+% Seções finais do relatório (implementação, calibração, resultados e
+% conclusão). Pensado para ser incorporado ao relatório parcial; compila
+% também isoladamente. Tabelas geradas por scripts/make_tables.py.
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[round]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\newcommand{\topdois}{\operatorname{top}_2}
+
+\begin{document}
+
+\section*{Alterações em relação à proposta}
+
+A implementação segue a proposta, com três diferenças. Primeiro, a geração de
+vizinhos não enumera todos os movimentos viáveis: um movimento é sorteado por
+rejeição, o que preserva exatamente a distribuição uniforme entre os
+movimentos viáveis (Seção~\ref{sec:impl}). Segundo, o modelo resolvido pelo
+solver substitui a família (PLI-3) por uma linearização compacta
+equivalente (Seção~\ref{sec:solver}). Terceiro, a calibração da
+Seção~\ref{sec:calib} alterou as probabilidades-alvo $p_0$ e $p_{\min}$ e as
+probabilidades dos operadores; $\alpha$, $L$ e $K_{\max}$ foram mantidos.
+
+\section{Implementação}\label{sec:impl}
+
+O Simulated Annealing \citep{Kirkpatrick1983} foi implementado em C++17 sem bibliotecas externas e
+compilado com g++~15.2 (\texttt{-O2 -march=native}). Os experimentos foram
+executados em um Intel Core i5-10210U (4 núcleos físicos, 8 \emph{threads},
+até 4{,}2\,GHz) com 7\,GB de memória, sob Ubuntu~26.04. Para reduzir o tempo
+total, até oito processos foram executados simultaneamente (três instâncias do
+solver e cinco do SA); os tempos relatados são tempos de relógio de cada
+processo sob essa carga e, portanto, conservadores.
+
+\paragraph{Estruturas de dados.} Além do vetor \texttt{in\_solution}, de
+$E(C)$ e de $A(C)$, a solução mantém o conjunto $C$ e a fronteira
+$N(C)=\{v\notin C : v \text{ tem vizinho em } C\}$ em vetores com índice
+reverso, que permitem inserir, remover e sortear um elemento em $O(1)$, e o
+número de vizinhos em $C$ de cada setor. Uma inclusão ou remoção de $u$ custa
+$O(\deg u)$. Em vez dos dois maiores valores de $f$, são mantidos os
+\emph{três} maiores: com eles, $W$ após uma remoção ou troca é obtido em
+$O(1)$, e a recomputação em $O(|C|)$ só ocorre quando um desses três setores
+deixa a solução em um movimento aceito.
+
+\paragraph{Conectividade.} Os candidatos do \emph{Add} são os setores da
+fronteira, logo $C\cup\{v\}$ é sempre conexo. Uma remoção de $u\neq p$
+preserva a conectividade se, e somente se, $u$ não é ponto de articulação de
+$G[C]$. Os pontos de articulação são obtidos pela busca em profundidade de
+\citet{Tarjan1972} a partir do Palácio, em $O(|C|+\sum_{u\in C}\deg u)$, e
+recalculados sob demanda após cada movimento aceito. Para uma troca $(u,v)$,
+se $u$ não é articulação basta que $v$ tenha vizinho em $C\setminus\{u\}$.
+Se $u$ é articulação, as componentes de $G[C]-u$ são a que contém o Palácio
+e uma para cada filho $c$ de $u$ na árvore de busca com
+$\mathrm{low}(c)\geq\mathrm{disc}(u)$; $(C\setminus\{u\})\cup\{v\}$ é conexo
+se, e somente se, $v$ tem vizinho em todas elas. A componente de cada
+vizinho de $v$ é identificada pelo intervalo de tempos de descoberta da
+subárvore que o contém, com uma busca binária entre os filhos de $u$. O teste
+custa $O(\deg v\cdot\log\deg u)$ e dispensa a BFS da proposta. A rotina foi
+validada contra uma BFS em cerca de $1{,}2$ milhão de casos aleatórios.
+
+\paragraph{Sorteio dos movimentos.} A enumeração completa dos movimentos
+viáveis (Seção~5 da proposta) custaria $O(|C|\cdot|N(C)|)$ testes por troca.
+Em seu lugar, sorteia-se uniformemente um candidato em um superconjunto dos
+movimentos viáveis (a fronteira para o \emph{Add}, $C$ para o \emph{Remove} e
+$C\times N(C)$ para o \emph{Swap}) e rejeita-se o candidato inviável, até
+64, 64 e 4096 tentativas, respectivamente; esgotadas as tentativas, os
+candidatos são enumerados. Como cada tentativa é uniforme e independente, o
+primeiro candidato aceito é uniforme entre os viáveis, e a enumeração de
+reserva também o é; a distribuição dos vizinhos é, portanto, exatamente a da
+proposta. Ao final, a melhor solução é verificada por um procedimento
+independente (BFS e recálculo de $W$), e um segundo verificador, em Python,
+confere todos os arquivos de solução.
+
+\section{Modelo no solver}\label{sec:solver}
+
+O modelo da Seção~1.4 foi resolvido com o HiGHS~1.15.1
+\citep{HuangfuHall2018}, com uma \emph{thread}, \texttt{mip\_rel\_gap}$=0$ e
+limite de 1800\,s por instância. Escrita explicitamente, a família (PLI-3)
+tem $1+n+\binom{n}{2}$ restrições com até $n+2$ coeficientes cada: para
+$n=2000$, cerca de $2\cdot10^6$ linhas e $4\cdot10^9$ coeficientes, o que
+excede a memória disponível. Ela foi substituída pela linearização usual da
+soma dos $k$ maiores valores \citep{OgryczakTamir2003}, com variáveis
+auxiliares $t\geq0$ e $s_i\geq0$:
+\begin{align}
+  \sum_{i\in S} a_i x_i + 2t + \sum_{i\in S} s_i &\leq H, \label{eq:cap}\\
+  s_i &\geq f_i x_i - t, \qquad \forall i\in S. \label{eq:si}
+\end{align}
+Para $x$ fixo, $\min_{t\geq0}\, 2t+\sum_i \max\{0, f_i x_i - t\}$ é
+exatamente a soma dos dois maiores valores $f_i x_i$, atingida com $t$ igual
+ao segundo maior valor. Logo existe $(t,s)$ que satisfaz
+\eqref{eq:cap}--\eqref{eq:si} se, e somente se, $x$ satisfaz (PLI-3), e o
+conjunto de soluções viáveis em $x$ não muda. O modelo resultante tem
+$2n+2|E|+1$ variáveis e $2n+4|E|+1$ restrições; para jifc12, são 33\,027
+variáveis, 62\,053 restrições e 188\,155 coeficientes.
+
+\section{Calibração dos parâmetros}\label{sec:calib}
+
+Os parâmetros foram calibrados um fator por vez nas instâncias jifc01, jifc05
+e jifc09 ($n=500$, uma de cada família), com sementes 101 a 103 (101 a 108
+na última etapa), distintas das usadas nos experimentos finais. A medida de
+qualidade é o desvio percentual médio para o BKV,
+$100(\mathrm{BKV}-\mathrm{SF})/\mathrm{BKV}$, negativo quando a solução
+supera o BKV. Como na proposta, as temperaturas são definidas pela
+probabilidade de aceitar uma piora típica \citep{Johnson1989}. Como $T_0$ e
+$T_{\min}$ são ambos proporcionais à escala $d$, o
+número de níveis independe da instância: é o menor $k$ com
+$\alpha^k\leq \ln p_0/\ln p_{\min}$. Na proposta ($p_0=0{,}8$,
+$p_{\min}=10^{-3}$, $\alpha=0{,}95$) são sempre 67 níveis, de modo que
+$K_{\max}=100$ nunca é atingido.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Desvio médio para o BKV (\%) em função de $p_0$ e $p_{\min}$, com
+    $\alpha=0{,}95$, $L=50|S|$ e operadores 40/30/30. Entre parênteses, o
+    número de níveis de temperatura.}
+  \label{tab:temp}
+  \input{tabelas/calibracao_temperatura.tex}
+\end{table}
+
+A Tabela~\ref{tab:temp} mostra que a temperatura final é o fator dominante.
+Com $p_{\min}=10^{-3}$, o algoritmo termina com taxa de aceitação de 4\% a
+17\% e a solução corrente ainda abaixo da solução gulosa; em jifc09, nenhuma
+das três execuções melhorou a solução inicial. Reduzir $p_{\min}$ para
+$10^{-20}$ diminui o desvio médio entre 1{,}8 e 2{,}1 pontos percentuais;
+reduções adicionais trazem ganho desprezível. A temperatura inicial com
+$p_0=0{,}8$ destrói a solução gulosa sem benefício: $p_0=0{,}5$ obteve
+resultados melhores com menos níveis. Foram escolhidos $p_0=0{,}5$ e
+$p_{\min}=10^{-20}$, o que resulta em 82 níveis, abaixo de $K_{\max}$.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Desvio médio para o BKV (\%) em função de $\alpha$ e $L$, com
+    $p_0=0{,}5$, $p_{\min}=10^{-20}$ e operadores 40/30/30.}
+  \label{tab:resf}
+  \input{tabelas/calibracao_resfriamento.tex}
+\end{table}
+
+O esforço de uma execução é proporcional ao número de níveis vezes $L$. Na
+Tabela~\ref{tab:resf}, entre as configurações de esforço semelhante
+($\alpha=0{,}90$ com $L=100|S|$, $\alpha=0{,}95$ com $L=50|S|$ e
+$\alpha=0{,}98$ com $L=25|S|$), a da proposta é a melhor.
+Aumentar o esforço em até cinco vezes reduz o desvio em no máximo 0{,}3 ponto
+percentual, e
+por isso $\alpha=0{,}95$ e $L=50|S|$ foram mantidos.
+
+\begin{table}[htbp]
+  \centering
+  \caption{Desvio médio para o BKV (\%) por mistura de operadores, com 8
+    sementes, e fração das iterações sem vizinho viável.}
+  \label{tab:ops}
+  \input{tabelas/calibracao_operadores.tex}
+\end{table}
+
+A Tabela~\ref{tab:ops} explica o efeito das probabilidades dos operadores.
+As boas soluções saturam a capacidade do aqueduto, e nelas quase nenhuma
+inclusão é viável: com 40\% de \emph{Add}, 35\% das iterações terminam sem
+vizinho e são desperdiçadas. Deslocar probabilidade para o \emph{Swap}, que
+substitui setores sem alterar muito o consumo, e para o \emph{Remove}, que
+libera capacidade, reduz esse desperdício para menos de 8\% e melhorou o
+resultado nas três instâncias. A configuração final usa \emph{Add},
+\emph{Remove} e \emph{Swap} com probabilidades 10\%, 20\% e 70\%.
+
+\section{Resultados}\label{sec:res}
+
+A Tabela~\ref{tab:res} apresenta, para cada instância, a média de dez
+replicações (sementes 1 a 10) do SA com a configuração calibrada e o resultado
+do solver. SI é o valor da solução gulosa, SF o melhor valor encontrado pelo
+SA, ``mel.'' a melhoria percentual média de SF sobre SI,
+$100(\mathrm{SF}-\mathrm{SI})/\mathrm{SI}$, e ``desv.'' o desvio percentual
+médio para o BKV. Valores de SF máximo acima do BKV estão em negrito.
+
+\begin{table}[htbp]
+  \centering
+  \footnotesize
+  \setlength{\tabcolsep}{3.5pt}
+  \caption{Resultados do SA (configuração calibrada) e do HiGHS.}
+  \label{tab:res}
+  \input{tabelas/resultados.tex}
+\end{table}
+
+Todas as 120 soluções produzidas pelo SA foram confirmadas pelos dois
+verificadores. O SA melhorou a solução gulosa em todas as execuções, em média
+10{,}0\%, com ganhos maiores na família jifc01--jifc04 (7{,}0\% a 17{,}1\%) e
+menores na família jifc09--jifc12 (1{,}7\% a 4{,}9\%), em que a solução
+gulosa já é boa. O desvio padrão entre replicações não passa de 0{,}3\% do
+valor médio, de modo que o resultado depende pouco da semente.
+
+Em nove das doze instâncias, a média do SA supera o BKV, e a vantagem cresce
+com o tamanho da instância dentro de cada família, chegando a 12{,}7\% em
+jifc04. Nas três instâncias restantes (jifc01, jifc09 e jifc10), a melhor
+replicação fica entre 0{,}06\% e 0{,}32\% abaixo do BKV, e a média, entre
+0{,}24\% e 0{,}65\%. Como os BKV das instâncias maiores foram superados por
+margem grande, os limites superiores do solver são uma referência mais
+informativa: nenhuma solução do SA os ultrapassa, e a melhor solução de cada
+instância está entre 1{,}6\% e 4{,}7\% abaixo do limite. Esse intervalo é
+um limitante para a distância ao ótimo, que inclui também a folga do
+limite.
+
+O solver, por outro lado, não encontrou soluções úteis em 1800\,s: as
+soluções inteiras obtidas contêm apenas o Palácio e poucos vizinhos, com
+esplendor entre 106 e 868, e o gap informado fica acima de 99\%, calculado
+como $100(\text{limite}-\text{valor})/\text{limite}$. Em jifc04, jifc07,
+jifc08, jifc11 e jifc12, a árvore de busca não passou de dois nós. A causa é a relaxação linear fraca do modelo de fluxo: com
+$M=n-1$ em (PLI-6)--(PLI-7), um setor com $x_i$ próximo de zero pode
+receber e repassar fluxo, de modo que a relaxação quase ignora a
+conectividade e o limite se aproxima do de uma mochila fracionária. Um modelo
+mais forte exigiria, por exemplo, restrições de corte de conectividade
+geradas sob demanda \citep{MagnantiWolsey1995}, o que está fora do escopo
+deste trabalho.
+
+O tempo do SA cresce com $n$ e com $|C|$, de 10\,s nas instâncias com
+$n=500$ a 177\,s nas com $n=2000$, e é sempre muito menor que o tempo dado ao
+solver. Em média, a melhor solução é encontrada após 82\% a 99\% do tempo de
+execução, isto é, nos níveis finais e frios, como ilustra a
+Figura~\ref{fig:conv}. No primeiro nível, em que cerca de 70\% dos movimentos
+são aceitos, a solução corrente cai bem abaixo da gulosa; a partir daí, ela
+sobe de forma contínua, supera a solução inicial por volta do nível 30 e se
+estabiliza perto do nível 70, quando menos de 0{,}1\% dos movimentos ainda é
+aceito.
+
+A Tabela~\ref{tab:prop} compara as duas configurações nas mesmas sementes.
+A configuração da proposta termina ainda quente e fica, em média, 3{,}6 pontos
+percentuais atrás da calibrada; em toda a família jifc09--jifc12, nenhuma de
+suas replicações melhorou a solução gulosa. A configuração calibrada é melhor
+em todas as instâncias, e não apenas nas três usadas para calibrar, e é também
+mais rápida, apesar de ter mais níveis: com 40\% de \emph{Add}, muitas
+iterações esgotam as tentativas de rejeição e recorrem à enumeração da
+fronteira.
+
+\begin{table}[htbp]
+  \centering
+  \small
+  \caption{Configuração da proposta e configuração calibrada (sementes 1 a 5).}
+  \label{tab:prop}
+  \input{tabelas/proposta_vs_calibrada.tex}
+\end{table}
+
+\begin{figure}[htbp]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[width=0.85\textwidth, height=6cm, xlabel={nível de temperatura $k$},
+                 ylabel={esplendor}, legend pos=south east,
+                 y tick label style={/pgf/number format/1000 sep={.}}]
+      \addplot[thin, gray] table[x=level, y=current, col sep=comma]
+        {../../results/sa_calibrada/trace/jifc06_calibrada_s1.csv};
+      \addplot[thick, black] table[x=level, y=best, col sep=comma]
+        {../../results/sa_calibrada/trace/jifc06_calibrada_s1.csv};
+      \legend{solução corrente, melhor solução}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Evolução do SA em jifc06 (semente 1), ao final de cada nível.}
+  \label{fig:conv}
+\end{figure}
+
+\section{Conclusão}
+
+O Simulated Annealing proposto, com amostragem uniforme dos movimentos
+viáveis por rejeição e testes de conectividade baseados em pontos de
+articulação, produziu soluções viáveis de alta qualidade para todas as
+instâncias, superando o BKV em nove das doze e ficando a menos de 0{,}7\% dele
+nas demais, em no máximo três minutos por execução. O modelo PLIM, mesmo com a
+linearização compacta da restrição hídrica, não produziu soluções úteis em
+30 minutos, mas forneceu limites superiores que situam as soluções do SA a no
+máximo 4{,}7\% do ótimo.
+
+A calibração mostrou que a escolha da temperatura final é decisiva neste
+problema: a configuração da proposta encerrava a busca antes que a solução
+convergisse. Mostrou também que a capacidade hídrica saturada torna as
+inclusões quase sempre inviáveis, o que favorece um peso maior para as trocas.
+Como a melhor solução ainda é encontrada nos últimos níveis, uma linha de
+continuação é estender a fase fria, por exemplo com reaquecimentos ou uma
+busca local final. Do lado exato, cortes de conectividade gerados sob demanda
+devem fortalecer a relaxação e permitir avaliar melhor a distância ao ótimo.
+
+\begin{thebibliography}{9}
+\bibitem[Huangfu e Hall(2018)]{HuangfuHall2018}
+Q.~Huangfu e J.~A.~J. Hall. Parallelizing the dual revised simplex method.
+\emph{Mathematical Programming Computation}, 10(1):119--142, 2018.
+
+\bibitem[Johnson et~al.(1989)]{Johnson1989}
+D.~S. Johnson, C.~R. Aragon, L.~A. McGeoch e C.~Schevon. Optimization by
+simulated annealing: an experimental evaluation; part I, graph partitioning.
+\emph{Operations Research}, 37(6):865--892, 1989.
+
+\bibitem[Kirkpatrick et~al.(1983)]{Kirkpatrick1983}
+S.~Kirkpatrick, C.~D. Gelatt e M.~P. Vecchi. Optimization by simulated
+annealing. \emph{Science}, 220(4598):671--680, 1983.
+
+\bibitem[Magnanti e Wolsey(1995)]{MagnantiWolsey1995}
+T.~L. Magnanti e L.~A. Wolsey. Optimal trees. Em M.~O. Ball et~al.
+(eds.), \emph{Network Models}, Handbooks in Operations Research and
+Management Science, vol.~7, p. 503--615. Elsevier, 1995.
+
+\bibitem[Ogryczak e Tamir(2003)]{OgryczakTamir2003}
+W.~Ogryczak e A.~Tamir. Minimizing the sum of the $k$ largest functions in
+linear time. \emph{Information Processing Letters}, 85(3):117--122, 2003.
+
+\bibitem[Tarjan(1972)]{Tarjan1972}
+R.~E. Tarjan. Depth-first search and linear graph algorithms. \emph{SIAM
+Journal on Computing}, 1(2):146--160, 1972.
+\end{thebibliography}
+
+\end{document}
